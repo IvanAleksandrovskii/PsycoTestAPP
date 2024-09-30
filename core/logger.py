@@ -1,4 +1,4 @@
-# logger.py
+# core/logger.py
 
 import logging
 from pythonjsonlogger import jsonlogger
