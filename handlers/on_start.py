@@ -1,12 +1,12 @@
 # handlers/on_strart.py
 
-from aiogram import Router, types
+from aiogram import types, Router
 from aiogram.filters import CommandStart
 
-from core import logger
+from services import UserService
+from core import settings, logger
 from core.models import db_helper
-# from handlers import main_keyboard
-# from services import UserService
+
 
 router = Router()
 
@@ -14,22 +14,40 @@ router = Router()
 @router.message(CommandStart())
 async def start_handler(message: types.Message):
     username = message.from_user.username
-    chat_id = message.chat.id
+    chat_id = int(message.chat.id)
+
+    user_service = UserService()
 
     async for session in db_helper.session_getter():
         try:
-            # user_service = UserService(session)
-            # user = await user_service.get_user(chat_id)
-            # if not user:
-            #     await user_service.create_user(chat_id, username)
-            await message.answer(
-                f"Привет, {username}! Tect tect",
-                )
-            # else:
-            #     await message.answer(f"С возвращением, {username}! Посмотрим цены или котиков?",
-            #                          reply_markup=main_keyboard)
+            # Get welcome message
+            welcome_message = settings.bot.welcome_message
+
+            user = await user_service.get_user(chat_id)
+            if not user:
+                user = await user_service.create_user(chat_id, username)
+                logger.info("Created new user: %s, username: %s", user.tg_user, user.username)
+
+            elif user.username != username:
+                updated = await user_service.update_username(chat_id, username)
+                if updated:
+                    logger.info("Updated username for user %s to %s", chat_id, username)
+                else:
+                    logger.warning("Failed to update username for user %s", chat_id)
+
+                logger.info("Updated username for user %s to %s", user.tg_user, user.username)
+
+            if welcome_message and '{username}' in welcome_message:
+                formatted_message = welcome_message.format(username=username or "пользователь")
+            else:
+                formatted_message = welcome_message
+
+            await message.answer(formatted_message)
+
         except Exception as e:
-            logger.error(f"Database error: {e}")
-            await message.answer("Извините, произошла ошибка. Пожалуйста, попробуйте позже.")
+            logger.error(f"Database error in start_handler: {e}")
+
+            await message.answer(settings.bot.user_error_message)
+
         finally:
             await session.close()

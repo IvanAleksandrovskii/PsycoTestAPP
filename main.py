@@ -7,14 +7,14 @@ from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
 import os
 
-from core import logger
+from core import logger, settings
 from handlers import router as main_router
 
 
 logging.basicConfig(level=logging.INFO)
 load_dotenv(".env")
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = settings.bot.token
 
 dp = Dispatcher()
 

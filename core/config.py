@@ -24,6 +24,10 @@ POSTGRES_ECHO = os.getenv("POSTGRES_ECHO", "True").lower() in ('true', '1')
 # App ENV variables
 DEBUG = os.getenv("DEBUG", "True").lower() in ('true', '1')
 
+# Bot ENV variables
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_WELCOME_MESSAGE = os.getenv("BOT_WELCOME_MESSAGE", "Hello, {username}, I'm your Psyco-Bot!")
+
 
 class DBConfig(BaseModel):
     url: PostgresDsn = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_ADDRESS}:5432/{POSTGRES_DB}"
@@ -50,9 +54,16 @@ class RunConfig(BaseModel):
     debug: bool = DEBUG
 
 
+class BotConfig(BaseModel):
+    token: str = BOT_TOKEN
+    welcome_message: str = BOT_WELCOME_MESSAGE
+    user_error_message: str = "Something went wrong. Please try again later."
+
+
 class Settings(BaseSettings):
     run: RunConfig = RunConfig()
     db: DBConfig = DBConfig()
+    bot: BotConfig = BotConfig()
 
 
 settings = Settings()
