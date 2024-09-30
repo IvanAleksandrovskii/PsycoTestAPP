@@ -26,7 +26,7 @@ async def start_handler(message: types.Message):
             user = await user_service.get_user(chat_id)
             if not user:
                 user = await user_service.create_user(chat_id, username)
-                logger.info("Created new user: %s, username: %s", user.tg_user, user.username)
+                logger.info("Created new user: %s, username: %s", user.chat_id, user.username)
 
             elif user.username != username:
                 updated = await user_service.update_username(chat_id, username)
@@ -35,7 +35,7 @@ async def start_handler(message: types.Message):
                 else:
                     logger.warning("Failed to update username for user %s", chat_id)
 
-                logger.info("Updated username for user %s to %s", user.tg_user, user.username)
+                logger.info("Updated username for user %s to %s", user.chat_id, user.username)
 
             if welcome_message and '{username}' in welcome_message:
                 formatted_message = welcome_message.format(username=username or "пользователь")
