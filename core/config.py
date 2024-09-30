@@ -23,10 +23,20 @@ POSTGRES_ECHO = os.getenv("POSTGRES_ECHO", "True").lower() in ('true', '1')
 
 # App ENV variables
 DEBUG = os.getenv("DEBUG", "True").lower() in ('true', '1')
+APP_RUN_HOST = str(os.getenv("APP_RUN_HOST", "0.0.0.0"))
+APP_RUN_PORT = int(os.getenv("APP_RUN_PORT", 8000))
+
+# SQLAdmin ENV variables
+SQLADMIN_SECRET_KEY = os.getenv("SQLADMIN_SECRET_KEY", "sqladmin_secret_key")
+SQLADMIN_USERNAME = os.getenv("SQLADMIN_USERNAME", "admin")
+SQLADMIN_PASSWORD = os.getenv("SQLADMIN_PASSWORD", "password")
 
 # Bot ENV variables
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 BOT_WELCOME_MESSAGE = os.getenv("BOT_WELCOME_MESSAGE", "Hello, {username}, I'm your Psyco-Bot!")
+
+# CORS ENV variables
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", ["*"])
 
 
 class DBConfig(BaseModel):
@@ -52,6 +62,14 @@ class DBConfig(BaseModel):
 
 class RunConfig(BaseModel):
     debug: bool = DEBUG
+    host: str = APP_RUN_HOST
+    port: int = APP_RUN_PORT
+
+
+class SQLAdminConfig(BaseModel):
+    secret_key: str = SQLADMIN_SECRET_KEY
+    username: str = SQLADMIN_USERNAME
+    password: str = SQLADMIN_PASSWORD
 
 
 class BotConfig(BaseModel):
@@ -60,10 +78,16 @@ class BotConfig(BaseModel):
     user_error_message: str = "Something went wrong. Please try again later."
 
 
+class CORSConfig(BaseModel):
+    allowed_origins: list = ALLOWED_ORIGINS
+
+
 class Settings(BaseSettings):
     run: RunConfig = RunConfig()
+    admin_panel: SQLAdminConfig = SQLAdminConfig()
     db: DBConfig = DBConfig()
     bot: BotConfig = BotConfig()
+    cors: CORSConfig = CORSConfig()
 
 
 settings = Settings()
