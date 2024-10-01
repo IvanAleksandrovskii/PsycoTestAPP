@@ -17,6 +17,8 @@ class MovieQuizAdmin(BaseAdminModel, model=MovieQuiz):
     column_searchable_list = ["title", "description"]
     column_sortable_list = ["title", "created_at", "updated_at"]
 
+    category = "Movie Quiz"
+
     async def on_model_change(self, data: dict, model: Any, is_created: bool, session: Any) -> None:
         if "picture" in data and isinstance(data["picture"], UploadFile):
             filename = await movie_quiz_storage.put(data["picture"])
@@ -34,6 +36,8 @@ class MovieQuizQuestionAdmin(BaseAdminModel, model=MovieQuizQuestion):
     column_searchable_list = ["question_text", "interesting_fact"]
     column_sortable_list = ["created_at", "updated_at"]
 
+    category = "Movie Quiz"
+
     async def on_model_change(self, data: dict, model: Any, is_created: bool, session: Any) -> None:
         if "picture" in data and isinstance(data["picture"], UploadFile):
             filename = await movie_quiz_storage.put(data["picture"])
@@ -49,6 +53,8 @@ class MovieQuizAnswerAdmin(BaseAdminModel, model=MovieQuizAnswer):
     column_searchable_list = ["answer_text"]
     column_sortable_list = ["created_at", "updated_at", "is_correct"]
     form_excluded_columns = ["created_at", "updated_at"]
+
+    category = "Movie Quiz"
 
     
     async def scaffold_list_query(self):

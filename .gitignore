@@ -4,5 +4,5 @@
 **/__pycache__/
 DS_Store
 .env
-.media/
+media/
 **/__unused__/
