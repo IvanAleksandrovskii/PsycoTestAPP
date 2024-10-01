@@ -1,3 +1,5 @@
+# handlers/admin.py
+
 import asyncio
 
 from aiogram import types, Router
