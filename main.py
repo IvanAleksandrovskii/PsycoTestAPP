@@ -10,6 +10,7 @@ from fastapi.responses import ORJSONResponse, JSONResponse
 from fastapi import FastAPI, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 from sqladmin import Admin
 
@@ -73,6 +74,9 @@ main_app = FastAPI(
     lifespan=lifespan,
     default_response_class=ORJSONResponse,
 )
+
+# Mount media storage
+main_app.mount("/media/movie_quiz", StaticFiles(directory=settings.media.movie_quiz_path), name="movie_quiz")
 
 # SQLAdmin
 admin = Admin(main_app, engine=async_sqladmin_db_helper.engine, authentication_backend=sqladmin_authentication_backend)

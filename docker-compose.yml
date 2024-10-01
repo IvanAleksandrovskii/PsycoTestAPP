@@ -8,16 +8,30 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "5432:5432"
-#    networks:
-#      - some
+    # networks:
+    #   - some
     volumes:
       - pg_data:/var/lib/postgresql/data
 
-#networks:
+#   web:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     ports:
+#       - "${APP_RUN_PORT:-8000}:8000"
+#     networks:
+#       - some
+#     depends_on:
+#       - pg
+#     command: /app/start.sh
+#     volumes:
+#       - media_files:/media
+
+# networks:
 #  some:
 #    external: false
 #    driver: bridge
 
 volumes:
   pg_data:
-  media_files:
+  # media_files:

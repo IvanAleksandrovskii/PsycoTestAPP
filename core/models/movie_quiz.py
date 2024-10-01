@@ -5,7 +5,10 @@ import uuid
 from sqlalchemy import String, ForeignKey, Text, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from fastapi_storages.integrations.sqlalchemy import FileType
+
 from core.models.base import Base
+from services import movie_quiz_storage
 
 
 class MovieQuiz(Base):
@@ -15,6 +18,9 @@ class MovieQuiz(Base):
     description: Mapped[str] = mapped_column(Text, nullable=True)
     
     questions: Mapped[list["MovieQuizQuestion"]] = relationship(back_populates="quiz", cascade="all, delete-orphan")
+
+    picture = mapped_column(FileType(storage=movie_quiz_storage))
+
 
     def __repr__(self):
         return f"MovieQuiz(text='{self.description}', id={self.id}, title='{self.title}')"
@@ -30,6 +36,8 @@ class MovieQuizQuestion(Base):
     question_text: Mapped[str] = mapped_column(Text, nullable=False)
 
     interesting_fact: Mapped[str] = mapped_column(Text, nullable=True)
+    picture = mapped_column(FileType(storage=movie_quiz_storage))
+
     
     quiz: Mapped["MovieQuiz"] = relationship(back_populates="questions")
     answers: Mapped[list["MovieQuizAnswer"]] = relationship(back_populates="question", cascade="all, delete-orphan")

@@ -38,6 +38,9 @@ BOT_WELCOME_MESSAGE = os.getenv("BOT_WELCOME_MESSAGE", "Hello, {username}, I'm y
 # CORS ENV variables
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", ["*"])
 
+MEDIA_FILES_ALLOWED_EXTENSIONS = os.getenv("MEDIA_FILES_ALLOWED_EXTENSIONS",
+                                           ['.jpg', '.jpeg', '.png'])
+
 
 class DBConfig(BaseModel):
     url: PostgresDsn = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_ADDRESS}:5432/{POSTGRES_DB}"
@@ -82,12 +85,32 @@ class CORSConfig(BaseModel):
     allowed_origins: list = ALLOWED_ORIGINS
 
 
+class MediaConfig(BaseModel):
+    # base_url: str = "http://localhost:8000"
+    base_url: str = "https://4a7c-2405-9800-b662-23fa-340e-34ec-c217-9231.ngrok-free.app"
+    movie_quiz_path: str = "media/movie_quiz"
+    allowed_image_extensions: list[str] = list(MEDIA_FILES_ALLOWED_EXTENSIONS)
+
+    @field_validator('movie_quiz_path')
+    def validate_path(cls, v):
+        if not os.path.isabs(v):
+            raise ValueError("Path must be absolute")
+        return v
+
+    @field_validator('allowed_image_extensions')
+    def validate_extensions(cls, v):
+        if not all(ext.startswith('.') for ext in v):
+            raise ValueError("All extensions must start with a dot")
+        return v
+
+
 class Settings(BaseSettings):
     run: RunConfig = RunConfig()
     admin_panel: SQLAdminConfig = SQLAdminConfig()
     db: DBConfig = DBConfig()
     bot: BotConfig = BotConfig()
     cors: CORSConfig = CORSConfig()
+    media: MediaConfig = MediaConfig()
 
 
 settings = Settings()

@@ -1,7 +1,6 @@
 # handlers/movie_quiz.py
 
 import random
-# import asyncio
 from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -10,8 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from core.models import db_helper
-from core.models.movie_quiz import MovieQuiz, MovieQuizQuestion, MovieQuizAnswer
-from core import logger
+from core.models.movie_quiz import MovieQuiz, MovieQuizQuestion
+from core import logger, settings
 
 
 router = Router()
@@ -39,14 +38,19 @@ async def start_quiz(message: types.Message, state: FSMContext):
         await message.answer("No quizzes available at the moment.")
         return
 
-    keyboard = types.InlineKeyboardMarkup(
-        inline_keyboard=[
-            [types.InlineKeyboardButton(text=quiz.title, callback_data=f"quiz:{quiz.id}")]
-            for quiz in quizzes
-        ]
-    )
+    for quiz in quizzes:
+        keyboard = types.InlineKeyboardMarkup(
+            inline_keyboard=[[types.InlineKeyboardButton(text="Start this quiz", callback_data=f"quiz:{quiz.id}")]]
+        )
+        
+        quiz_text = f"{quiz.title}\n\n{quiz.description}" if quiz.description else quiz.title
+        
+        if quiz.picture:
+            image_url = f"{settings.media.base_url}/{quiz.picture}"
+            await message.answer_photo(photo=image_url, caption=quiz_text, reply_markup=keyboard)
+        else:
+            await message.answer(quiz_text, reply_markup=keyboard)
 
-    await message.answer("Choose a quiz:", reply_markup=keyboard)
     await state.set_state(QuizState.choosing_quiz)
 
 @router.callback_query(QuizState.choosing_quiz)
@@ -112,7 +116,12 @@ async def send_next_question(message: types.Message, state: FSMContext):
         ]
     )
 
-    await message.answer(question.question_text, reply_markup=keyboard)
+    if question.picture:
+        image_url = f"{settings.media.base_url}/{question.picture}"
+        await message.answer_photo(photo=image_url, caption=question.question_text, reply_markup=keyboard)
+    else:
+        await message.answer(question.question_text, reply_markup=keyboard)
+
     await state.set_state(QuizState.answering_questions)
 
 @router.callback_query(QuizState.answering_questions)
@@ -133,11 +142,16 @@ async def process_answer(callback_query: types.CallbackQuery, state: FSMContext)
     if answer.is_correct:
         data['correct_answers'] += 1
     
-    await callback_query.message.edit_text(
+    result_text = (
         f"Your answer: {answer.answer_text}\n"
         f"Correct answer: {next(a.answer_text for a in question.answers if a.is_correct)}\n"
         f"{'Correct!' if answer.is_correct else 'Incorrect.'}"
     )
+    
+    if question.picture:
+        await callback_query.message.edit_caption(caption=result_text, reply_markup=None)
+    else:
+        await callback_query.message.edit_text(result_text, reply_markup=None)
 
     if question.interesting_fact:
         await callback_query.message.answer(f"Interesting fact: {question.interesting_fact}")
