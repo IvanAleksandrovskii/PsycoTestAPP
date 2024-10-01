@@ -7,7 +7,6 @@ from typing import AsyncGenerator
 import asyncio
 
 from fastapi.responses import ORJSONResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -20,22 +19,31 @@ from core.admin.models import setup_admin
 
 from core import settings, logger
 
-from bot_main import main as start_bot
+from aiogram import Bot, Dispatcher
+from handlers import router as main_router
 
+# Initialize bot and dispatcher
+def setup_bot():
+    bot = Bot(token=settings.bot.token)
+    dp = Dispatcher()
+    dp.include_router(main_router)
+    return bot, dp
 
-
-def run_async(func):
-    loop = asyncio.get_event_loop()
-    return lambda: loop.create_task(func())
-
+# Global variables for bot and dispatcher
+bot = None
+dp = None
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # not used: ignore
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    global bot, dp
     # Startup
     logger.info("Starting up the FastAPI application...")
 
-    # Start the bot in a separate task
-    bot_task = asyncio.create_task(start_bot())
+    # Initialize bot and dispatcher
+    bot, dp = setup_bot()
+    
+    # Start polling in a separate task
+    polling_task = asyncio.create_task(dp.start_polling(bot))
 
     yield
 
@@ -45,12 +53,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # not used: ign
     await db_helper.dispose()
     await async_sqladmin_db_helper.dispose()
 
-    # Cancel the bot task
-    bot_task.cancel()
+    # Stop polling
+    await dp.stop_polling()
+    
+    # Cancel the polling task
+    polling_task.cancel()
     try:
-        await bot_task
+        await polling_task
     except asyncio.CancelledError:
-        logger.info("Bot task cancelled successfully")
+        pass
+
+    # Close bot session
+    await bot.session.close()
+
+    logger.info("Bot stopped successfully")
 
 
 main_app = FastAPI(
@@ -99,7 +115,7 @@ logging.getLogger("uvicorn.access").addFilter(NoFaviconFilter())
 
 # CORS
 main_app.add_middleware(
-    CORSMiddleware,  # type: ignore
+    CORSMiddleware,
     allow_origins=settings.cors.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
