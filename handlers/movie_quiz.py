@@ -5,7 +5,7 @@ from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from sqlalchemy import select
+from sqlalchemy import select  # TODO: Use active() instead of select
 from sqlalchemy.orm import selectinload
 
 from core.models import db_helper
@@ -25,7 +25,7 @@ class QuizState(StatesGroup):
 async def start_quiz(message: types.Message, state: FSMContext):
     async for session in db_helper.session_getter():
         try: 
-            quizzes = await session.execute(select(MovieQuiz))
+            quizzes = await session.execute(select(MovieQuiz))  # TODO: Use active() instead of select
             quizzes = quizzes.scalars().all()
         except Exception as e:
             logger.exception(f"Error in get_all_quizzes: {e}")
@@ -60,7 +60,7 @@ async def process_quiz_choice(callback_query: types.CallbackQuery, state: FSMCon
     async def fetch_quiz():
         async for session in db_helper.session_getter():
             try:
-                stmt = select(MovieQuiz).options(
+                stmt = select(MovieQuiz).options(  # TODO: Use active() instead of select
                     selectinload(MovieQuiz.questions).selectinload(MovieQuizQuestion.answers)
                 ).where(MovieQuiz.id == quiz_id)
                 result = await session.execute(stmt)
