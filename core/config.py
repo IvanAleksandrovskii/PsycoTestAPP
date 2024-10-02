@@ -80,7 +80,7 @@ class BotConfig(BaseModel):
     welcome_message: str = BOT_WELCOME_MESSAGE
     user_error_message: str = "Something went wrong. Please try again later."
     admin_error_message: str = ("Извините, произошла ошибка. Пожалуйста, попробуйте позже или обратитесь к разработчику с "
-                          "подробной информацией: когда и после какого действия произошла ошибка.")
+        "подробной информацией: когда и после какого действия произошла ошибка.")
     confirming_words: list[str] = ["да", "yes", "конечно", "отправить", "send", "accept", "absolutely"]
 
 

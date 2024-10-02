@@ -12,66 +12,69 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from core import logger
 from core.models import db_helper
-from core.models.psyco_test_with_correct_answer import (
-    PycoTestWithCorrectAnswer,
-    PsycoQuestionWithCorrectAnswer,
-    PsycoAnswerWithCorrectMarker,
-    PsycoResultWithFromToGroup
+from core.models import (
+    PsycoTest,
+    PsycoQuestion,
+    PsycoAnswer,
+    PsycoQuestionAnswer,
+    PsycoResult
 )
-
 
 questions_file = Path(__file__).parent.parent / "psyco_tests_data" / "stress_condition.csv"
 interpretations_file = Path(__file__).parent.parent / "psyco_tests_data" / "stress_condition_interpretation.csv"
-
 
 async def create_stress_condition_test(session: AsyncSession):
     # Check if the test already exists
     test_name = "Стресс-тест"
     existing_test = await session.execute(
-        select(PycoTestWithCorrectAnswer).where(PycoTestWithCorrectAnswer.name == test_name)
+        select(PsycoTest).where(PsycoTest.name == test_name)
     )
     if existing_test.scalar_one_or_none():
         print(f"Тест '{test_name}' уже существует.")
         return
 
     # Create new test
-    new_test = PycoTestWithCorrectAnswer(
+    new_test = PsycoTest(
         name=test_name,
-        description="Экспресс диагностика состояния стресса"
+        description="Экспресс диагностика состояния стресса",
+        test_type="correct_answer"
     )
     session.add(new_test)
+
+    # Create or get "Да" and "Нет" answers
+    answer_no = await get_or_create_answer(session, "Нет")
+    answer_yes = await get_or_create_answer(session, "Да")
 
     # Read stress condition questions
     with questions_file.open(encoding='utf-8') as f:
         reader = csv.DictReader(f)
         next(reader)  # Skip the second row (headers)
         for row in reader:
-            question = PsycoQuestionWithCorrectAnswer(
+            question = PsycoQuestion(
                 question_text=row['экспресс диагностика состояния стресса'],
                 test=new_test
             )
-            logger.info(f"Created question: {question}")
             session.add(question)
 
-            # Add answers
-            answer_no = PsycoAnswerWithCorrectMarker(
-                answer_text="Нет",
-                is_correct=False,  # Always incorrect
-                question=question
+            # Add answer options
+            answer_option_no = PsycoQuestionAnswer(
+                question=question,
+                answer=answer_no,
+                is_correct=False
             )
-            answer_yes = PsycoAnswerWithCorrectMarker(
-                answer_text="Да",
-                is_correct=True,  # Always correct
-                question=question
+            answer_option_yes = PsycoQuestionAnswer(
+                question=question,
+                answer=answer_yes,
+                is_correct=True
             )
-            session.add_all([answer_no, answer_yes])
+            session.add_all([answer_option_no, answer_option_yes])
 
     # Read stress condition interpretation
     with interpretations_file.open(encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
             score = int(row['баллы'].split()[0])
-            result = PsycoResultWithFromToGroup(
+            result = PsycoResult(
                 test=new_test,
                 min_score=score,
                 max_score=score,
@@ -82,6 +85,15 @@ async def create_stress_condition_test(session: AsyncSession):
     await session.commit()
     print(f"Тест '{test_name}' успешно создан.")
 
+async def get_or_create_answer(session: AsyncSession, answer_text: str) -> PsycoAnswer:
+    existing_answer = await session.execute(
+        select(PsycoAnswer).where(PsycoAnswer.answer_text == answer_text)
+    )
+    answer = existing_answer.scalar_one_or_none()
+    if not answer:
+        answer = PsycoAnswer(answer_text=answer_text)
+        session.add(answer)
+    return answer
 
 # Run stress condition test creator
 async def run_stress_condition_test_creator():
@@ -92,7 +104,6 @@ async def run_stress_condition_test_creator():
             logger.exception(f"Error in run_stress_condition_test_creator: {e}")
         finally:
             await session.close()
-
 
 if __name__ == "__main__":
     asyncio.run(run_stress_condition_test_creator())

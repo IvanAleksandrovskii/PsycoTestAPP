@@ -12,11 +12,12 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from core import logger
 from core.models import db_helper
-from core.models.psyco_tests_with_score_answers import (
-    PsycoTestWithScoreAnswers,
-    PsycoQuestionWithScoreAnswers,
-    PsycoAnswerWithScoreMarker,
-    PsycoResultWithScoreGroup
+from core.models import (
+    PsycoTest,
+    PsycoQuestion,
+    PsycoAnswer,
+    PsycoQuestionAnswer,
+    PsycoResult
 )
 
 questions_file = Path(__file__).parent.parent / "psyco_tests_data" / "anxiety.csv"
@@ -37,16 +38,17 @@ async def create_anxiety_test(session: AsyncSession):
 
     # Check if the test already exists
     existing_test = await session.execute(
-        select(PsycoTestWithScoreAnswers).where(PsycoTestWithScoreAnswers.name == test_name)
+        select(PsycoTest).where(PsycoTest.name == test_name)
     )
     if existing_test.scalar_one_or_none():
         print(f"Тест '{test_name}' уже существует.")
         return
 
     # Create new test
-    new_test = PsycoTestWithScoreAnswers(
+    new_test = PsycoTest(
         name=test_name,
-        description=test_description
+        description=test_description,
+        test_type="score_answers"
     )
     session.add(new_test)
 
@@ -58,7 +60,7 @@ async def create_anxiety_test(session: AsyncSession):
         for row in reader:
             print(f"Processing row: {row}")
             question_text = row[0]  # Вопрос находится в первом столбце
-            question = PsycoQuestionWithScoreAnswers(
+            question = PsycoQuestion(
                 question_text=question_text,
                 test=new_test
             )
@@ -67,12 +69,13 @@ async def create_anxiety_test(session: AsyncSession):
             # Add answers with scores
             for score in range(4):
                 answer_text = row[score + 1]  # Ответы начинаются со второго столбца
-                answer = PsycoAnswerWithScoreMarker(
-                    answer_text=answer_text,
-                    score_value=score,
-                    question=question
+                answer = await get_or_create_answer(session, answer_text)
+                question_answer = PsycoQuestionAnswer(
+                    question=question,
+                    answer=answer,
+                    score_value=score
                 )
-                session.add(answer)
+                session.add(question_answer)
 
     # Read anxiety interpretation
     with interpretations_file.open(encoding='utf-8') as f:
@@ -97,7 +100,7 @@ async def create_anxiety_test(session: AsyncSession):
                 print(f"Ошибка при обработке строки интерпретации: {e}")
                 continue
 
-            result = PsycoResultWithScoreGroup(
+            result = PsycoResult(
                 test=new_test,
                 min_score=min_score,
                 max_score=max_score,
@@ -107,6 +110,16 @@ async def create_anxiety_test(session: AsyncSession):
 
     await session.commit()
     print(f"Тест '{test_name}' успешно создан.")
+
+async def get_or_create_answer(session: AsyncSession, answer_text: str) -> PsycoAnswer:
+    existing_answer = await session.execute(
+        select(PsycoAnswer).where(PsycoAnswer.answer_text == answer_text)
+    )
+    answer = existing_answer.scalar_one_or_none()
+    if not answer:
+        answer = PsycoAnswer(answer_text=answer_text)
+        session.add(answer)
+    return answer
 
 async def run_anxiety_test_creator():
     async for session in db_helper.session_getter():

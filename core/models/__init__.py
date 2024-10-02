@@ -4,24 +4,16 @@ __all__ = [
     "MovieQuiz",
     "MovieQuizQuestion",
     "MovieQuizAnswer",
-    "PsycoAnswerWithCorrectMarker",
-    "PsycoQuestionWithCorrectAnswer",
-    "PsycoResultWithFromToGroup",
-    "PycoTestWithCorrectAnswer",
-    "PsycoTestWithScoreAnswers",
-    "PsycoQuestionWithScoreAnswers",
-    "PsycoResultWithScoreGroup",
-    "PsycoAnswerWithScoreMarker",
+    "PsycoTest",
+    "PsycoResult",
+    "PsycoQuestion",
+    "PsycoQuestionAnswer",
+    "PsycoAnswer",
     ]
 
 from .db_helper import db_helper
 from .tg_user import TGUser
 from .movie_quiz import MovieQuiz, MovieQuizQuestion, MovieQuizAnswer
-from .psyco_test_with_correct_answer import (
-    PsycoAnswerWithCorrectMarker, PsycoQuestionWithCorrectAnswer, 
-    PsycoResultWithFromToGroup, PycoTestWithCorrectAnswer
-    )
-from .psyco_tests_with_score_answers import (
-    PsycoTestWithScoreAnswers, PsycoQuestionWithScoreAnswers, 
-    PsycoResultWithScoreGroup, PsycoAnswerWithScoreMarker
+from .psyco_test import (
+    PsycoTest, PsycoResult, PsycoQuestion, PsycoQuestionAnswer, PsycoAnswer
     )
