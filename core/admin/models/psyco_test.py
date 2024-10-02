@@ -8,11 +8,11 @@ from core.models.psyco_test import PsycoTest, PsycoQuestion, PsycoAnswer, PsycoQ
 
 
 class PsycoTestAdmin(BaseAdminModel, model=PsycoTest):
-    column_list = ["id", "name", "description", "test_type", "is_active", "created_at", "updated_at"]
+    column_list = ["id", "name", "description", "allow_back", "is_active", "created_at", "updated_at"]
     column_details_exclude_list = ["questions", "results"]
     form_excluded_columns = ["questions", "results", "created_at", "updated_at"]
-    column_searchable_list = ["name", "description", "test_type"]
-    column_sortable_list = ["name", "test_type", "created_at", "updated_at"]
+    column_searchable_list = ["name", "description", "allow_back"]
+    column_sortable_list = ["name", "allow_back", "created_at", "updated_at"]
 
     category = "Psychological Tests"
 

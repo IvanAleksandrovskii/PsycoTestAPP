@@ -25,7 +25,7 @@ interpretations_file = Path(__file__).parent.parent / "psyco_tests_data" / "stre
 
 async def create_stress_condition_test(session: AsyncSession):
     # Check if the test already exists
-    test_name = "Стресс-тест"
+    test_name = "Стресс - Экспресс Тест"
     existing_test = await session.execute(
         select(PsycoTest).where(PsycoTest.name == test_name)
     )
@@ -37,7 +37,7 @@ async def create_stress_condition_test(session: AsyncSession):
     new_test = PsycoTest(
         name=test_name,
         description="Экспресс диагностика состояния стресса",
-        test_type="correct_answer"
+        allow_back=True
     )
     session.add(new_test)
 

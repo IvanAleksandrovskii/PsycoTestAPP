@@ -1,7 +1,7 @@
 # core/models/psyco_test.py
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, ForeignKey  # Boolean
+from sqlalchemy import Integer, String, ForeignKey, Boolean
 from typing import List, Optional
 
 from .base import Base
@@ -28,7 +28,9 @@ class PsycoTest(Base):
 
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(String, nullable=False)
-    test_type: Mapped[str] = mapped_column(String, nullable=False)
+
+    # test_type: Mapped[str] = mapped_column(String, nullable=False)
+    allow_back: Mapped[bool] = mapped_column(Boolean, default=True)
 
     questions: Mapped[List["PsycoQuestion"]] = relationship(back_populates="test", cascade="all, delete-orphan")
     results: Mapped[List["PsycoResult"]] = relationship(back_populates="test", cascade="all, delete-orphan")

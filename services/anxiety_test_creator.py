@@ -50,7 +50,7 @@ async def create_anxiety_test(session: AsyncSession):
     new_test = PsycoTest(
         name=test_name,
         description=test_description,
-        test_type="score_answers"
+        allow_back=True
     )
     session.add(new_test)
 
