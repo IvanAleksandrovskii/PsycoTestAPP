@@ -14,6 +14,12 @@ class PsycoAnswer(Base):
 
     answer_text: Mapped[str] = mapped_column(String, nullable=False)
 
+    def __repr__(self):
+        return f"<PsycoAnswer(id={self.id}, answer_text={self.answer_text})>"
+
+    def __str__(self):
+        return f"{self.answer_text}"
+
 class PsycoTest(Base):
     """
     Represents a generic psychological test.
@@ -27,6 +33,12 @@ class PsycoTest(Base):
     questions: Mapped[List["PsycoQuestion"]] = relationship(back_populates="test", cascade="all, delete-orphan")
     results: Mapped[List["PsycoResult"]] = relationship(back_populates="test", cascade="all, delete-orphan")
 
+    def __repr__(self):
+        return f"<PsycoTest(id={self.id}, name={self.name})>"
+
+    def __str__(self):
+        return f"{self.name}"
+
 class PsycoQuestion(Base):
     """
     Represents a question in a psychological test.
@@ -38,6 +50,12 @@ class PsycoQuestion(Base):
 
     test: Mapped[PsycoTest] = relationship(back_populates="questions")
     answer_options: Mapped[List["PsycoQuestionAnswer"]] = relationship(back_populates="question", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<PsycoQuestion(id={self.id}, question_text={self.question_text})>"
+
+    def __str__(self):
+        return f"{self.question_text}"
 
 class PsycoQuestionAnswer(Base):
     """
@@ -53,6 +71,12 @@ class PsycoQuestionAnswer(Base):
     question: Mapped[PsycoQuestion] = relationship(back_populates="answer_options")
     answer: Mapped[PsycoAnswer] = relationship()
 
+    def __repr__(self):
+        return f"<PsycoQuestionAnswer(id={self.id}, question_id={self.question_id}, answer_id={self.answer_id})>"
+
+    def __str__(self):
+        return f"{self.question_id} - {self.answer_id}"
+
 class PsycoResult(Base):
     """
     Represents a result group for a psychological test.
@@ -65,3 +89,9 @@ class PsycoResult(Base):
     text: Mapped[str] = mapped_column(String, nullable=False)
 
     test: Mapped[PsycoTest] = relationship(back_populates="results")
+
+    def __repr__(self):
+        return f"<PsycoResult(id={self.id}, test_id={self.test_id}, min_score={self.min_score}, max_score={self.max_score})>"
+
+    def __str__(self):
+        return f"{self.test_id} - {self.min_score} - {self.max_score}"

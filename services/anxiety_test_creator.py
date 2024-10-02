@@ -20,8 +20,10 @@ from core.models import (
     PsycoResult
 )
 
+
 questions_file = Path(__file__).parent.parent / "psyco_tests_data" / "anxiety.csv"
 interpretations_file = Path(__file__).parent.parent / "psyco_tests_data" / "anxiety_interpretation.csv"
+
 
 async def create_anxiety_test(session: AsyncSession):
     # Read test name and description from the first row of questions file
@@ -52,6 +54,9 @@ async def create_anxiety_test(session: AsyncSession):
     )
     session.add(new_test)
 
+    # Create a dictionary to store unique answers
+    unique_answers = {}
+
     # Read anxiety questions
     with questions_file.open(encoding='utf-8') as f:
         reader = csv.reader(f)
@@ -69,7 +74,10 @@ async def create_anxiety_test(session: AsyncSession):
             # Add answers with scores
             for score in range(4):
                 answer_text = row[score + 1]  # Ответы начинаются со второго столбца
-                answer = await get_or_create_answer(session, answer_text)
+                if answer_text not in unique_answers:
+                    unique_answers[answer_text] = await get_or_create_answer(session, answer_text)
+                
+                answer = unique_answers[answer_text]
                 question_answer = PsycoQuestionAnswer(
                     question=question,
                     answer=answer,
@@ -78,11 +86,12 @@ async def create_anxiety_test(session: AsyncSession):
                 session.add(question_answer)
 
     # Read anxiety interpretation
+    # Read anxiety interpretation
     with interpretations_file.open(encoding='utf-8') as f:
         reader = csv.reader(f)
-        headers = next(reader)
+        headers = next(reader)  # Read the header row
         print(f"Interpretation CSV headers: {headers}")
-        next(reader)  # Skip the second row with column names
+        
         for row in reader:
             print(f"Processing interpretation row: {row}")
             try:
@@ -111,6 +120,7 @@ async def create_anxiety_test(session: AsyncSession):
     await session.commit()
     print(f"Тест '{test_name}' успешно создан.")
 
+
 async def get_or_create_answer(session: AsyncSession, answer_text: str) -> PsycoAnswer:
     existing_answer = await session.execute(
         select(PsycoAnswer).where(PsycoAnswer.answer_text == answer_text)
@@ -121,6 +131,7 @@ async def get_or_create_answer(session: AsyncSession, answer_text: str) -> Psyco
         session.add(answer)
     return answer
 
+
 async def run_anxiety_test_creator():
     async for session in db_helper.session_getter():
         try:
@@ -129,6 +140,7 @@ async def run_anxiety_test_creator():
             logger.exception(f"Error in run_anxiety_test_creator: {e}")
         finally:
             await session.close()
+
 
 if __name__ == "__main__":
     asyncio.run(run_anxiety_test_creator())
