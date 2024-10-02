@@ -60,12 +60,12 @@ async def create_stress_condition_test(session: AsyncSession):
             answer_option_no = PsycoQuestionAnswer(
                 question=question,
                 answer=answer_no,
-                is_correct=False
+                score_value=0
             )
             answer_option_yes = PsycoQuestionAnswer(
                 question=question,
                 answer=answer_yes,
-                is_correct=True
+                score_value=1
             )
             session.add_all([answer_option_no, answer_option_yes])
 

@@ -1,7 +1,7 @@
 # core/models/psyco_test.py
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Boolean, Integer, String, ForeignKey
+from sqlalchemy import Integer, String, ForeignKey  # Boolean
 from typing import List, Optional
 
 from .base import Base
@@ -65,7 +65,7 @@ class PsycoQuestionAnswer(Base):
 
     question_id: Mapped[int] = mapped_column(ForeignKey("psyco_questions.id"))
     answer_id: Mapped[int] = mapped_column(ForeignKey("psyco_answers.id"))
-    is_correct: Mapped[Optional[bool]] = mapped_column(Boolean)
+    # is_correct: Mapped[Optional[bool]] = mapped_column(Boolean)
     score_value: Mapped[Optional[int]] = mapped_column(Integer)
 
     question: Mapped[PsycoQuestion] = relationship(back_populates="answer_options")

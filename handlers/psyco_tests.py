@@ -130,10 +130,7 @@ async def process_answer(callback_query: types.CallbackQuery, state: FSMContext)
         return
 
     score = data['score']
-    if test.test_type == "correct_answer":
-        score += 1 if answer_option.is_correct else 0
-    elif test.test_type == "score_answers":
-        score += answer_option.score_value or 0
+    score += answer_option.score_value
 
     answers = data['answers']
     answers.append(answer_option.answer.answer_text)

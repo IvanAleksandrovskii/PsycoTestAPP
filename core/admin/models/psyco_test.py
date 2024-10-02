@@ -49,9 +49,9 @@ class PsycoAnswerAdmin(BaseAdminModel, model=PsycoAnswer):
 
 
 class PsycoQuestionAnswerAdmin(BaseAdminModel, model=PsycoQuestionAnswer):
-    column_list = ["id", "question", "answer", "is_correct", "score_value", "is_active", "created_at", "updated_at"]
+    column_list = ["id", "question", "answer", "score_value", "is_active", "created_at", "updated_at"]
     column_searchable_list = ["question.question_text", "answer.answer_text"]
-    column_sortable_list = ["created_at", "updated_at", "is_correct", "score_value"]
+    column_sortable_list = ["created_at", "updated_at", "score_value"]
     form_excluded_columns = ["created_at", "updated_at"]
 
     category = "Psychological Tests"
