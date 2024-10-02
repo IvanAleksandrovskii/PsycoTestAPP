@@ -90,7 +90,7 @@ class CORSConfig(BaseModel):
 
 class MediaConfig(BaseModel):
     # base_url: str = "http://localhost:8000"
-    base_url: str = "https://4a7c-2405-9800-b662-23fa-340e-34ec-c217-9231.ngrok-free.app"
+    base_url: str = "https://46ee-2405-9800-b662-23fa-340e-34ec-c217-9231.ngrok-free.app"
     movie_quiz_path: str = "media/movie_quiz"
     allowed_image_extensions: list[str] = list(MEDIA_FILES_ALLOWED_EXTENSIONS)
 
