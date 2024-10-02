@@ -33,10 +33,11 @@ def setup_bot():
 # Global variables for bot and dispatcher
 bot = None
 dp = None
+polling_task = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    global bot, dp
+    global bot, dp, polling_task
     # Startup
     logger.info("Starting up the FastAPI application...")
 
@@ -55,17 +56,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await async_sqladmin_db_helper.dispose()
 
     # Stop polling
-    await dp.stop_polling()
-    
-    # Cancel the polling task
-    polling_task.cancel()
-    try:
-        await polling_task
-    except asyncio.CancelledError:
-        pass
+    if polling_task:
+        polling_task.cancel()
+        try:
+            await polling_task
+        except asyncio.CancelledError:
+            pass
 
     # Close bot session
-    await bot.session.close()
+    if bot:
+        await bot.session.close()
 
     logger.info("Bot stopped successfully")
 

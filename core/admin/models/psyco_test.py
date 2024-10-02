@@ -22,7 +22,7 @@ class PsycoTestAdmin(BaseAdminModel, model=PsycoTest):
 
     category = "Psychological Tests"
 
-    async def on_model_change(self, data: dict, model: Any, is_created: bool, session: Any) -> None:
+    async def on_model_change(self, data: dict, model: Any, is_created: bool, session: Any) -> None:  # TODO: Add mechanics to delete old image file from the storage when new image is uploaded
         if "picture" in data and isinstance(data["picture"], UploadFile):
             filename = await psyco_test_storage.put(data["picture"])
             model.picture = filename
