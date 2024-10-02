@@ -1,6 +1,5 @@
 # handlers/psyco_tests.py
 
-import json
 from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -9,17 +8,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from core.models import db_helper
-from core.models.psyco_test import PsycoTest, PsycoQuestion, PsycoQuestionAnswer, PsycoResult
-from core import logger
+from core.models import PsycoTest, PsycoQuestion, PsycoQuestionAnswer
+from core import logger, settings 
 
 router = Router()
-
 
 class PsycoTestState(StatesGroup):
     choosing_test = State()
     confirming_test = State()
     answering_questions = State()
-
 
 @router.message(Command("start_psyco_test"))
 async def start_psyco_test(message: types.Message, state: FSMContext):
@@ -48,7 +45,6 @@ async def start_psyco_test(message: types.Message, state: FSMContext):
     await message.answer("Please choose a psychological test:", reply_markup=keyboard)
     await state.set_state(PsycoTestState.choosing_test)
 
-
 @router.callback_query(PsycoTestState.choosing_test)
 async def confirm_test_choice(callback_query: types.CallbackQuery, state: FSMContext):
     test_id = callback_query.data.split(':')[1]
@@ -72,28 +68,28 @@ async def confirm_test_choice(callback_query: types.CallbackQuery, state: FSMCon
         return
 
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-        [types.InlineKeyboardButton(text="Start Test", callback_data=f"start_test:{test_id}")],
+        [types.InlineKeyboardButton(text="Start Test", callback_data=f"start_test:{test.id}")],
         [types.InlineKeyboardButton(text="Back to Test Selection", callback_data="back_to_selection")]
     ])
 
-    await callback_query.message.edit_text(
-        f"You've selected: {test.name}\n\n"
-        f"Description: {test.description}\n\n"
-        "Are you ready to start the test?",
-        reply_markup=keyboard
-    )
+    description_text = f"You've selected: {test.name}\n\n{test.description}\n\nAre you ready to start the test?"
+
+    if test.picture:
+        image_url = f"{settings.media.base_url}/{test.picture}"
+        await callback_query.message.answer_photo(photo=image_url, caption=description_text, reply_markup=keyboard)
+    else:
+        await callback_query.message.edit_text(text=description_text, reply_markup=keyboard)
+
     await state.set_state(PsycoTestState.confirming_test)
     await callback_query.answer()
-
 
 @router.callback_query(PsycoTestState.confirming_test, lambda c: c.data == "back_to_selection")
 async def back_to_test_selection(callback_query: types.CallbackQuery, state: FSMContext):
     await start_psyco_test(callback_query.message, state)
     await callback_query.answer()
 
-
 @router.callback_query(PsycoTestState.confirming_test, lambda c: c.data.startswith("start_test:"))
-async def start_confirmed_test(callback_query: types.CallbackQuery, state: FSMContext):
+async def start_test(callback_query: types.CallbackQuery, state: FSMContext):
     test_id = callback_query.data.split(':')[1]
     
     async def fetch_test():
@@ -111,28 +107,15 @@ async def start_confirmed_test(callback_query: types.CallbackQuery, state: FSMCo
             finally:
                 await session.close()
 
-    try:
-        test = await fetch_test()
+    test = await fetch_test()
 
-        if not test:
-            await callback_query.answer("Test not found.")
-            return
+    if not test:
+        await callback_query.answer("Test not found.")
+        return
 
-        questions = test.questions
-        if not questions:
-            await callback_query.message.answer("This test has no questions.")
-            await state.clear()
-            return
-
-        await state.update_data(test=test, current_question_index=0, score=0, answers=[])
-        await send_next_question(callback_query.message, state)
-        await callback_query.answer()
-
-    except Exception as e:
-        logger.exception(f"Error in start_confirmed_test: {e}")
-        await callback_query.message.answer("An error occurred while starting the test. Please try again later.")
-        await state.clear()
-
+    await state.update_data(test=test, current_question_index=0, score=0, answers=[])
+    await send_next_question(callback_query.message, state)
+    await callback_query.answer()
 
 async def send_next_question(message: types.Message, state: FSMContext):
     data = await state.get_data()
@@ -157,9 +140,18 @@ async def send_next_question(message: types.Message, state: FSMContext):
         keyboard.inline_keyboard.append([types.InlineKeyboardButton(text="⬅️ Back", callback_data="back_question")])
 
     test_progress = f"Question {current_question_index + 1}/{len(test.questions)}\n\n"
-    await message.edit_text(test_progress + current_question.question_text, reply_markup=keyboard)
-    await state.set_state(PsycoTestState.answering_questions)
+    question_text = test_progress + current_question.question_text
 
+    if test.picture:
+        image_url = f"{settings.media.base_url}/{test.picture}"
+        await message.edit_media(
+            media=types.InputMediaPhoto(media=image_url, caption=question_text),
+            reply_markup=keyboard
+        )
+    else:
+        await message.edit_text(text=question_text, reply_markup=keyboard)
+
+    await state.set_state(PsycoTestState.answering_questions)
 
 @router.callback_query(PsycoTestState.answering_questions, lambda c: c.data == "back_question")
 async def go_back_question(callback_query: types.CallbackQuery, state: FSMContext):
@@ -173,7 +165,6 @@ async def go_back_question(callback_query: types.CallbackQuery, state: FSMContex
         await send_next_question(callback_query.message, state)
     
     await callback_query.answer()
-
 
 @router.callback_query(PsycoTestState.answering_questions, lambda c: c.data.startswith("answer:"))
 async def process_answer(callback_query: types.CallbackQuery, state: FSMContext):
@@ -201,7 +192,6 @@ async def process_answer(callback_query: types.CallbackQuery, state: FSMContext)
     await send_next_question(callback_query.message, state)
     await callback_query.answer()
 
-
 async def end_test(message: types.Message, state: FSMContext):
     data = await state.get_data()
     test = data['test']
@@ -211,7 +201,7 @@ async def end_test(message: types.Message, state: FSMContext):
     result = next((r for r in test.results if r.min_score <= score <= r.max_score), None)
     
     if not result:
-        await message.answer("Unable to interpret your results. Please contact the administrator.")
+        await message.edit_text("Unable to interpret your results. Please contact the administrator.")
         await state.clear()
         return
 
@@ -222,6 +212,13 @@ async def end_test(message: types.Message, state: FSMContext):
         f"Interpretation:\n{result.text}"
     )
 
-    await message.edit_text(result_text)
+    if test.picture:
+        image_url = f"{settings.media.base_url}/{test.picture}"
+        await message.edit_media(
+            media=types.InputMediaPhoto(media=image_url, caption=result_text)
+        )
+    else:
+        await message.edit_text(result_text)
+
     logger.info(f"User {message.from_user.id} completed test {test.id} with score {score}")
     await state.clear()

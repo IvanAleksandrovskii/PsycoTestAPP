@@ -41,5 +41,6 @@ class CustomFileSystemStorage(FileSystemStorage):
 ALLOWED_IMAGE_EXTENSIONS = settings.media.allowed_image_extensions
 
 movie_quiz_storage = CustomFileSystemStorage(settings.media.movie_quiz_path, ALLOWED_IMAGE_EXTENSIONS)
+psyco_test_storage = CustomFileSystemStorage(settings.media.psyco_test_path, ALLOWED_IMAGE_EXTENSIONS)
 
 logger.info("Initialized all storage instances")

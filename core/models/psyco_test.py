@@ -2,9 +2,11 @@
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Integer, String, ForeignKey, Boolean
+from fastapi_storages.integrations.sqlalchemy import FileType
 from typing import List, Optional
 
 from .base import Base
+from services import psyco_test_storage
 
 class PsycoAnswer(Base):
     """
@@ -29,7 +31,8 @@ class PsycoTest(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(String, nullable=False)
 
-    # test_type: Mapped[str] = mapped_column(String, nullable=False)
+    picture = mapped_column(FileType(storage=psyco_test_storage))
+
     allow_back: Mapped[bool] = mapped_column(Boolean, default=True)
 
     questions: Mapped[List["PsycoQuestion"]] = relationship(back_populates="test", cascade="all, delete-orphan")

@@ -1,20 +1,31 @@
 # core/admin/models/psyco_test.py
 
 # from fastapi import UploadFile
+from typing import Any
+from fastapi import UploadFile
 from sqlalchemy import select
 
 from .base import BaseAdminModel 
-from core.models.psyco_test import PsycoTest, PsycoQuestion, PsycoAnswer, PsycoQuestionAnswer, PsycoResult
+from core.models import (
+    PsycoTest, PsycoQuestion, PsycoAnswer, 
+    PsycoQuestionAnswer, PsycoResult
+    )
+from services import psyco_test_storage
 
 
 class PsycoTestAdmin(BaseAdminModel, model=PsycoTest):
-    column_list = ["id", "name", "description", "allow_back", "is_active", "created_at", "updated_at"]
+    column_list = ["id", "name", "description", "allow_back", "is_active", "picture", "created_at", "updated_at"]
     column_details_exclude_list = ["questions", "results"]
     form_excluded_columns = ["questions", "results", "created_at", "updated_at"]
     column_searchable_list = ["name", "description", "allow_back"]
     column_sortable_list = ["name", "allow_back", "created_at", "updated_at"]
 
     category = "Psychological Tests"
+
+    async def on_model_change(self, data: dict, model: Any, is_created: bool, session: Any) -> None:
+        if "picture" in data and isinstance(data["picture"], UploadFile):
+            filename = await psyco_test_storage.put(data["picture"])
+            model.picture = filename
 
     async def scaffold_list_query(self):
         query = select(self.model).order_by(self.model.created_at.desc())

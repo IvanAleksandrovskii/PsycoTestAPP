@@ -77,6 +77,7 @@ main_app = FastAPI(
 
 # Mount media storage
 main_app.mount("/media/movie_quiz", StaticFiles(directory=settings.media.movie_quiz_path), name="movie_quiz")
+main_app.mount("/media/psyco_tests", StaticFiles(directory=settings.media.psyco_test_path), name="psyco_tests")
 
 # SQLAdmin
 admin = Admin(main_app, engine=async_sqladmin_db_helper.engine, authentication_backend=sqladmin_authentication_backend)
