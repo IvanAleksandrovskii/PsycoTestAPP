@@ -284,7 +284,23 @@ async def end_test(message: types.Message, state: FSMContext):
 
     # Проверяем, есть ли еще незавершенные тесты
     keyboard, reply_text = await get_unfinished_tests_keyboard(message.chat.id, message.from_user.username)
+    
     if keyboard:
-        await message.answer(reply_text, reply_markup=keyboard)
+        result_text += f"\n\n{reply_text}"
+        if test.picture:
+            image_url = f"{settings.media.base_url}/{test.picture}"
+            await message.edit_media(
+                media=types.InputMediaPhoto(media=image_url, caption=result_text),
+                reply_markup=keyboard
+            )
+        else:
+            await message.edit_text(text=result_text, reply_markup=keyboard)
     else:
-        await message.answer("Спасибо, вы прошли все отправленные вам тесты! Можете посмотреть доступные тесты, используя команду /start_psyco_test")
+        result_text += "\n\nСпасибо, вы прошли все отправленные вам тесты! Можете посмотреть доступные тесты, используя команду /start_psyco_test"
+        if test.picture:
+            image_url = f"{settings.media.base_url}/{test.picture}"
+            await message.edit_media(
+                media=types.InputMediaPhoto(media=image_url, caption=result_text)
+            )
+        else:
+            await message.edit_text(result_text)
