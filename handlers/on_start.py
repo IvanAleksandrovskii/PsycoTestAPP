@@ -277,7 +277,7 @@ async def end_test(message: types.Message, state: FSMContext):
                 await session.commit()
                 
                 # Уведомление отправителю о завершении теста
-                await message.bot.send_message(sent_test.sender_id, f"Пользователь @{message.from_user.username} завершил отправленный вами тест '{test.name}' с результатом {score} и интерпретацией: {result.text}.")
+                await message.bot.send_message(sent_test.sender_id, f"Пользователь @{sent_test.receiver_username} завершил отправленный вами тест '{test.name}' с результатом {score} и интерпретацией: {result.text}.")
 
     logger.info(f"User {message.from_user.id} completed test {test.id} with score {score}")
     await state.clear()
