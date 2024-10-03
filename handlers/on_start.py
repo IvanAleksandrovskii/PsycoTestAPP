@@ -17,6 +17,17 @@ from core.models import db_helper
 router = Router()
 
 
+async def notify_test_owner(bot, sent_test_id: int, receiver_username: str):
+    async with db_helper.session_factory() as session:
+        sent_test = await session.get(SentTest, sent_test_id)
+        if sent_test:
+            test = await session.get(PsycoTest, sent_test.test_id)
+            await bot.send_message(
+                sent_test.sender_id,
+                f"Пользователь @{receiver_username} начал проходить отправленный вами тест '{test.name}'."
+            )
+
+
 class PsycoTestState(StatesGroup):
     choosing_test = State()
     confirming_test = State()
@@ -25,7 +36,6 @@ class PsycoTestState(StatesGroup):
 
 async def get_unfinished_tests_keyboard(chat_id: int, username: str):
     async with db_helper.session_factory() as session:
-        # Проверяем, есть ли тесты в листе ожидания
         waiting_tests = await session.execute(
             select(SentTest).where(
                 SentTest.receiver_username == username,
@@ -39,7 +49,6 @@ async def get_unfinished_tests_keyboard(chat_id: int, username: str):
             test.is_delivered = True
             test.delivered_at = func.now()
         
-        # Получаем все незавершенные тесты для пользователя
         unfinished_tests = await session.execute(
             select(SentTest).where(
                 SentTest.receiver_id == chat_id,
@@ -76,7 +85,6 @@ async def cmd_start(message: types.Message, state: FSMContext):
         user = await user_service.create_user(chat_id, username)
         logger.info(f"Created new user: {chat_id}, username: {username}")
     elif user.username != username:
-        # user.username = username
         await user_service.update_username(chat_id, username)
         logger.info(f"Updated username for user {chat_id} to {username}")
 
@@ -111,7 +119,6 @@ async def start_sent_test(callback_query: types.CallbackQuery, state: FSMContext
             
             await state.update_data(test=test, current_question_index=0, score=0, answers=[], current_sent_test_id=sent_test_id)
             
-            # Показываем описание теста и кнопку для начала
             description_text = f"Вы выбрали тест: {test.name}\n\n{test.description}\n\nВы готовы начать?"
             keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
                 [types.InlineKeyboardButton(text="Начать тест", callback_data=f"confirm_start_test:{test.id}")]
@@ -124,6 +131,9 @@ async def start_sent_test(callback_query: types.CallbackQuery, state: FSMContext
                 await callback_query.message.edit_text(text=description_text, reply_markup=keyboard)
             
             await state.set_state(PsycoTestState.confirming_test)
+            
+            # Notify test owner
+            await notify_test_owner(callback_query.bot, sent_test_id, callback_query.from_user.username)
         else:
             await callback_query.message.edit_text("Этот тест уже пройден или недоступен.")
             logger.warning(f"Test {sent_test_id} is already completed or unavailable")
@@ -267,7 +277,7 @@ async def end_test(message: types.Message, state: FSMContext):
                 await session.commit()
                 
                 # Уведомление отправителю о завершении теста
-                await message.bot.send_message(sent_test.sender_id, f"Пользователь {message.from_user.username} завершил отправленный вами тест '{test.name}' с результатом {score} и интерпретацией: {result.text}.")
+                await message.bot.send_message(sent_test.sender_id, f"Пользователь @{message.from_user.username} завершил отправленный вами тест '{test.name}' с результатом {score} и интерпретацией: {result.text}.")
 
     logger.info(f"User {message.from_user.id} completed test {test.id} with score {score}")
     await state.clear()

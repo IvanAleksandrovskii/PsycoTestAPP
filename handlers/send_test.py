@@ -13,6 +13,21 @@ from core.models import TGUser, PsycoTest, SentTest
 
 router = Router()
 
+
+# TODO: ADD validation before sending new test that there is no incompleted test with the same sender, the same receiver and the test
+async def check_existing_test(sender_id: int, receiver_username: str, test_id: int) -> bool:
+    async with db_helper.session_factory() as session:
+        existing_test = await session.execute(
+            select(SentTest).where(
+                SentTest.sender_id == sender_id,
+                SentTest.receiver_username == receiver_username,
+                SentTest.test_id == test_id,
+                SentTest.is_completed == False
+            )
+        )
+        return existing_test.scalar_one_or_none() is not None
+
+
 class SendTestStates(StatesGroup):
     WAITING_FOR_USERNAME = State()
     WAITING_FOR_TEST = State()
@@ -36,17 +51,14 @@ async def process_username(message: types.Message, state: FSMContext):
     else:
         await state.update_data(receiver_username=username, receiver_id=user.chat_id)
     
-    # Получение списка доступных тестов
     async with db_helper.session_factory() as session:
         result = await session.execute(select(PsycoTest).where(PsycoTest.is_active == True))
         tests = result.scalars().all()
     
-    # Создаем список кнопок
     keyboard = []
     for test in tests:
         keyboard.append([types.InlineKeyboardButton(text=test.name, callback_data=f"select_test:{test.id}")])
     
-    # Создаем InlineKeyboardMarkup с правильной структурой
     reply_markup = types.InlineKeyboardMarkup(inline_keyboard=keyboard)
     
     await state.set_state(SendTestStates.WAITING_FOR_TEST)
@@ -61,6 +73,17 @@ async def process_test_selection(callback_query: types.CallbackQuery, state: FSM
     async with db_helper.session_factory() as session:
         test = await session.get(PsycoTest, test_id)
     
+    # Check for existing incomplete test
+    existing_test = await check_existing_test(callback_query.from_user.id, data['receiver_username'], test_id)
+    if existing_test:
+        await callback_query.message.edit_text(
+            f"У пользователя {data['receiver_username']} уже есть незавершенный тест '{test.name}' от вас. Пожалуйста, выберите другой тест или другого пользователя.",
+            reply_markup=types.InlineKeyboardMarkup(inline_keyboard=[
+                [types.InlineKeyboardButton(text="Выбрать другой тест", callback_data="choose_another_test")]
+            ])
+        )
+        return
+
     await state.set_state(SendTestStates.CONFIRMING)
     await callback_query.message.edit_text(
         f"Вы уверены, что хотите отправить тест '{test.name}' пользователю {data['receiver_username']}?",
@@ -72,6 +95,20 @@ async def process_test_selection(callback_query: types.CallbackQuery, state: FSM
         ])
     )
 
+@router.callback_query(F.data == "choose_another_test")
+async def choose_another_test(callback_query: types.CallbackQuery, state: FSMContext):
+    async with db_helper.session_factory() as session:
+        result = await session.execute(select(PsycoTest).where(PsycoTest.is_active == True))
+        tests = result.scalars().all()
+    
+    keyboard = []
+    for test in tests:
+        keyboard.append([types.InlineKeyboardButton(text=test.name, callback_data=f"select_test:{test.id}")])
+    
+    reply_markup = types.InlineKeyboardMarkup(inline_keyboard=keyboard)
+    
+    await state.set_state(SendTestStates.WAITING_FOR_TEST)
+    await callback_query.message.edit_text("Выберите другой тест для отправки:", reply_markup=reply_markup)
 
 @router.callback_query(SendTestStates.CONFIRMING, F.data.in_(["confirm_send", "cancel_send"]))
 async def process_confirmation(callback_query: types.CallbackQuery, state: FSMContext):
@@ -90,8 +127,7 @@ async def process_confirmation(callback_query: types.CallbackQuery, state: FSMCo
         
         if data.get('receiver_id'):
             await callback_query.message.edit_text("Тест успешно отправлен!")
-            # Уведомление получателю
-            receiver_id = str(data['receiver_id'])  # Преобразуем UUID в строку
+            receiver_id = str(data['receiver_id'])
             try:
                 await callback_query.bot.send_message(receiver_id, f"Вам отправлен новый тест. Используйте /start, чтобы увидеть доступные тесты.")
             except Exception as e:

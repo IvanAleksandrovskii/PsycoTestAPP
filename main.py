@@ -6,6 +6,8 @@ from typing import AsyncGenerator
 
 import asyncio
 
+from aiogram.client.session.aiohttp import AiohttpSession
+
 from fastapi.responses import ORJSONResponse, JSONResponse
 from fastapi import FastAPI, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,7 +27,8 @@ from handlers import router as main_router
 
 # Initialize bot and dispatcher
 def setup_bot():
-    bot = Bot(token=settings.bot.token)
+    session = AiohttpSession(timeout=60)
+    bot = Bot(token=settings.bot.token, session=session)
     dp = Dispatcher()
     dp.include_router(main_router)
     return bot, dp
