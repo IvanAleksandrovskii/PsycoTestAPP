@@ -5,6 +5,7 @@ __all__ = [
 from .tg_user import TgUserAdmin
 from .movie_quiz import MovieQuizAdmin, MovieQuizQuestionAdmin, MovieQuizAnswerAdmin
 from .psyco_test import PsycoTestAdmin, PsycoResultAdmin, PsycoQuestionAdmin, PsycoQuestionAnswerAdmin, PsycoAnswerAdmin
+from .send_test import SendTestAdmin
 
 
 # Register admin views
@@ -18,3 +19,4 @@ def setup_admin(admin):
     admin.add_view(PsycoQuestionAdmin)
     admin.add_view(PsycoQuestionAnswerAdmin)
     admin.add_view(PsycoAnswerAdmin)
+    admin.add_view(SendTestAdmin)

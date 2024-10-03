@@ -9,6 +9,7 @@ __all__ = [
     "PsycoQuestion",
     "PsycoQuestionAnswer",
     "PsycoAnswer",
+    "SentTest",
     ]
 
 from .db_helper import db_helper
@@ -17,3 +18,4 @@ from .movie_quiz import MovieQuiz, MovieQuizQuestion, MovieQuizAnswer
 from .psyco_test import (
     PsycoTest, PsycoResult, PsycoQuestion, PsycoQuestionAnswer, PsycoAnswer
     )
+from .send_test import SentTest

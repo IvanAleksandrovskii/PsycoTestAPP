@@ -4,12 +4,13 @@ from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from core.models import db_helper
-from core.models import PsycoTest, PsycoQuestion, PsycoQuestionAnswer
-from core import logger, settings 
+from core.models import PsycoTest, PsycoQuestion, PsycoQuestionAnswer, SentTest
+from core import logger, settings
+
 
 router = Router()
 
@@ -222,3 +223,47 @@ async def end_test(message: types.Message, state: FSMContext):
 
     logger.info(f"User {message.from_user.id} completed test {test.id} with score {score}")
     await state.clear()
+
+# async def end_test(message: types.Message, state: FSMContext, bot):
+#     data = await state.get_data()
+#     test = data['test']
+#     score = data['score']
+#     answers = data['answers']
+#     current_sent_test_id = data.get('current_sent_test_id')
+
+#     result = next((r for r in test.results if r.min_score <= score <= r.max_score), None)
+    
+#     if not result:
+#         await message.edit_text("Unable to interpret your results. Please contact the administrator.")
+#         await state.clear()
+#         return
+
+#     result_text = (
+#         f"Test completed!\n\n"
+#         f"Your answers:\n" + "\n".join(f"{i+1}. {answer.answer.answer_text}" for i, answer in enumerate(answers)) + "\n\n"
+#         f"Your score: {score}\n\n"
+#         f"Interpretation:\n{result.text}"
+#     )
+
+#     if test.picture:
+#         image_url = f"{settings.media.base_url}/{test.picture}"
+#         await message.edit_media(
+#             media=types.InputMediaPhoto(media=image_url, caption=result_text)
+#         )
+#     else:
+#         await message.edit_text(result_text)
+
+#     # Обновление статуса отправленного теста, если это применимо
+#     if current_sent_test_id:
+#         async with db_helper.session_factory() as session:
+#             sent_test = await session.get(SentTest, current_sent_test_id)
+#             if sent_test:
+#                 sent_test.is_completed = True
+#                 sent_test.completed_at = func.now()
+#                 await session.commit()
+                
+#                 # Уведомление отправителю о завершении теста
+#                 await bot.send_message(sent_test.sender_id, f"Пользователь {message.from_user.username} завершил отправленный вами тест '{test.name}' с результатом {score} и интерпретацией: {result.text}.")
+
+#     logger.info(f"User {message.from_user.id} completed test {test.id} with score {score}")
+#     await state.clear()
