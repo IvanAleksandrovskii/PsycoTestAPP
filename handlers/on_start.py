@@ -16,28 +16,14 @@ from core.models import db_helper
 
 router = Router()
 
+
 class PsycoTestState(StatesGroup):
     choosing_test = State()
     confirming_test = State()
     answering_questions = State()
 
-@router.message(CommandStart())
-async def cmd_start(message: types.Message, state: FSMContext):
-    chat_id = message.chat.id
-    username = message.from_user.username
 
-    logger.info(f"Start command received from user {username} (chat_id: {chat_id})")
-
-    user_service = UserService()
-
-    user = await user_service.get_user(chat_id)
-    if not user:
-        user = await user_service.create_user(chat_id, username)
-        logger.info(f"Created new user: {chat_id}, username: {username}")
-    elif user.username != username:
-        user.username = username
-        logger.info(f"Updated username for user {chat_id} to {username}")
-
+async def get_unfinished_tests_keyboard(chat_id: int, username: str):
     async with db_helper.session_factory() as session:
         # Проверяем, есть ли тесты в листе ожидания
         waiting_tests = await session.execute(
@@ -52,9 +38,6 @@ async def cmd_start(message: types.Message, state: FSMContext):
             test.receiver_id = chat_id
             test.is_delivered = True
             test.delivered_at = func.now()
-            # Уведомление отправителю
-            await message.bot.send_message(test.sender_id, f"Пользователь {username} получил отправленный вами тест.")
-            logger.info(f"Delivered waiting test from {test.sender_id} to {username}")
         
         # Получаем все незавершенные тесты для пользователя
         unfinished_tests = await session.execute(
@@ -73,15 +56,43 @@ async def cmd_start(message: types.Message, state: FSMContext):
             [types.InlineKeyboardButton(text=f"Пройти тест: {sent_test.test.name}", callback_data=f"start_sent_test:{sent_test.id}")]
             for sent_test in unfinished_tests
         ])
-        await message.reply("У вас есть непройденные тесты. Хотите пройти их сейчас?", reply_markup=keyboard)
+        return keyboard, f"У вас есть {len(unfinished_tests)} непройденных тестов. Хотите пройти их сейчас?"
     else:
         logger.info(f"User {username} has no unfinished tests")
-        welcome_message = settings.bot.welcome_message
-        if welcome_message and '{username}' in welcome_message:
-            formatted_message = welcome_message.format(username=username or "пользователь")
-        else:
-            formatted_message = welcome_message
-        await message.reply(formatted_message)
+        return None, "У вас нет непройденных тестов. Вы можете посмотреть доступные тесты, используя команду /start_psyco_test"
+
+
+@router.message(CommandStart())
+async def cmd_start(message: types.Message, state: FSMContext):
+    chat_id = message.chat.id
+    username = message.from_user.username
+
+    logger.info(f"Start command received from user {username} (chat_id: {chat_id})")
+
+    user_service = UserService()
+
+    user = await user_service.get_user(chat_id)
+    if not user:
+        user = await user_service.create_user(chat_id, username)
+        logger.info(f"Created new user: {chat_id}, username: {username}")
+    elif user.username != username:
+        # user.username = username
+        await user_service.update_username(chat_id, username)
+        logger.info(f"Updated username for user {chat_id} to {username}")
+
+    keyboard, reply_text = await get_unfinished_tests_keyboard(chat_id, username)
+
+    welcome_message = settings.bot.welcome_message
+    if welcome_message and '{username}' in welcome_message:
+        formatted_message = welcome_message.format(username=username or "пользователь")
+    else:
+        formatted_message = welcome_message
+
+    if keyboard:
+        await message.reply(f"{formatted_message}\n\n{reply_text}", reply_markup=keyboard)
+    else:
+        await message.reply(f"{formatted_message}\n\n{reply_text}")
+
 
 @router.callback_query(F.data.startswith("start_sent_test:"))
 async def start_sent_test(callback_query: types.CallbackQuery, state: FSMContext):
@@ -116,6 +127,7 @@ async def start_sent_test(callback_query: types.CallbackQuery, state: FSMContext
         else:
             await callback_query.message.edit_text("Этот тест уже пройден или недоступен.")
             logger.warning(f"Test {sent_test_id} is already completed or unavailable")
+
 
 @router.callback_query(PsycoTestState.confirming_test, F.data.startswith("confirm_start_test:"))
 async def confirm_start_test(callback_query: types.CallbackQuery, state: FSMContext):
@@ -166,6 +178,7 @@ async def send_next_question(message: types.Message, state: FSMContext):
 
     await state.set_state(PsycoTestState.answering_questions)
 
+
 @router.callback_query(PsycoTestState.answering_questions, F.data == "back_question")
 async def go_back_question(callback_query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -178,6 +191,7 @@ async def go_back_question(callback_query: types.CallbackQuery, state: FSMContex
         await send_next_question(callback_query.message, state)
     
     await callback_query.answer()
+
 
 @router.callback_query(PsycoTestState.answering_questions, F.data.startswith("answer:"))
 async def process_answer(callback_query: types.CallbackQuery, state: FSMContext):
@@ -204,6 +218,7 @@ async def process_answer(callback_query: types.CallbackQuery, state: FSMContext)
     
     await send_next_question(callback_query.message, state)
     await callback_query.answer()
+
 
 async def end_test(message: types.Message, state: FSMContext):
     data = await state.get_data()
@@ -256,3 +271,10 @@ async def end_test(message: types.Message, state: FSMContext):
 
     logger.info(f"User {message.from_user.id} completed test {test.id} with score {score}")
     await state.clear()
+
+    # Проверяем, есть ли еще незавершенные тесты
+    keyboard, reply_text = await get_unfinished_tests_keyboard(message.chat.id, message.from_user.username)
+    if keyboard:
+        await message.answer(reply_text, reply_markup=keyboard)
+    else:
+        await message.answer("Спасибо, вы прошли все отправленные вам тесты! Можете посмотреть доступные тесты, используя команду /start_psyco_test")
